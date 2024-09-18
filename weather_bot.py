@@ -2,9 +2,7 @@ import requests
 from datetime import datetime
 import math
 
-TOKEN = "6869510590:AAES08owvRm0JABKJEybzU3Q-VTH9ej7QmA"
-API_TOKEN = '9e778ebba87c3de82c6d7b1ea26a890d'
-chat_id = "-811509730"
+from config import TOKEN, API_TOKEN, chat_id
 
 code_to_smile = {
     "Clear": "Ясно \U00002600",
