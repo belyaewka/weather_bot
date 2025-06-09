@@ -24,6 +24,14 @@ logger = logging.getLogger('weather_bot')
 
 
 if __name__ == '__main__':
+    
+    # set headers
+    headers = requests.utils.default_headers()
+    headers.update(
+            {
+            'User-Agent': 'My User Agent 1.0'
+            }
+            )
 
     # set initial values for variables
     soup = None  # should change to Beautifulsoup object, if all is all right
@@ -35,10 +43,12 @@ if __name__ == '__main__':
         response_rp5 = requests.get(
             'https://rp5.ru/%D0%9F%D0%BE%D0%B3%D0%BE%D0%B4%D0%B0_%D0%B2_%D0%A1%D0%B0%D0%BD%D0%BA%D1%82-'
             '%D0%9F%D0%B5%D1%82%D0%B5%D1%80%D0%B1%D1%83%D1%80%D0%B3%D0%B5_(%D1%81%D0%B5%D0%B2-%D0%B7%D0'
-            '%B0%D0%BF%D0%B0%D0%B4)')
+            '%B0%D0%BF%D0%B0%D0%B4)', headers=headers, timeout=30)
 
         if response_rp5.status_code == 200:
             logger.info(f'Request to rp5.ru was successful, code={response_rp5.status_code}')
+            with open('rp5site', 'w', encoding='utf-8') as file:
+                file.write(response_rp5.text)
             text = response_rp5.text
             soup = BeautifulSoup(text, 'html.parser')
             logger.info('Beautifulsoup object from rp5.ru was created')
@@ -51,12 +61,13 @@ if __name__ == '__main__':
         response_open = requests.post(
             f'https://api.openweathermap.org/data/2.5/weather?lat='
             f'{LAT}&lon={LON}&date={datetime.now().strftime("%Y-%m-%d")}'
-            f'&appid={API_TOKEN}&units=metric', timeout=10)
+            f'&appid={API_TOKEN}&units=metric', timeout=20)
 
         if response_open.status_code == 200:
             logger.info(f'Request to OpenWeatherMap.org was successful, code={response_open.status_code}')
             data = response_open.json()
             op = Openweather(data)  # making Openweather object with data from OpenWeatherMap API
+            logger.info('Openweather object from OpenWeatherMap.org response was created')
     except Exception as e:
         op = None
         logger.error(f'There was an error during request to OpenWeatherMap: {e}')
@@ -68,10 +79,12 @@ if __name__ == '__main__':
             message = str(rp5)
         except Exception as e:
             logger.error(f'RpFive object creating error {e}')
-            if op:
-                message = str(op)
-            else:
-                logger.error('Total data receiving error')  # could not receive data from both sources
+            
+    if soup is None and op is not None: # if rp5 request failed but Openweather successful
+        message = str(op)
+    
+    if soup is None and op is None:        
+        logger.error('Total data receiving error')  # could not receive data from both sources
 
     # send message to telegram chat with {chat_id}
     try:
@@ -81,3 +94,5 @@ if __name__ == '__main__':
     except Exception as e:
         print('Total ERROR')
         logger.error(f'Message to telegram chat {chat_id} was NOT sent. ERROR : {e}')
+
+
